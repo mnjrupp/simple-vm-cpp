@@ -2,7 +2,7 @@
 //
 
 #include "simple-vm.h"
-const char *Bytecode::opname[] = {NULL,"iadd","isub","imul","ilt","ieg","br","brt",
+const char *Bytecode::opname[] = {NULL,"iadd","isub","imul","ilt","ieq","br","brt",
 						  "brf","iconst","load","gload","store","gstore",
 						  "print","pop","halt","call","ret"};
 		int Bytecode::operands[] ={0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,2,0};
@@ -14,8 +14,8 @@ VM::VM(int *_code,int length,int main, int datasize){
 	ip = main;								// where execution begins
 	globals = new int[datasize];
 	stack = new int[DEFAULT_STACK_SIZE];
-    sp = -1;
-	fp = -1;
+    sp = -1;								// stack point starts at -1
+	fp = -1;							    // frame pointer starts at -1
 	trace = false;
 	
 
@@ -60,7 +60,8 @@ VM::VM(int *_code,int length,int main, int datasize){
 				 stack[++sp] = (a == b) ? TRUE : FALSE;
 				 break;
 			case Bytecode::BR:
-				ip = code[ip++];
+				addr = code[ip++];
+				ip = addr;
 				break;
 			case Bytecode::BRT:
 				addr = code[ip++];
@@ -103,7 +104,7 @@ VM::VM(int *_code,int length,int main, int datasize){
 				nargs = code[ip++]; //how many args got pushed
 				stack[++sp] = nargs; // save num args
 				stack[++sp] = fp;	// save fp
-				stack[++sp] = ip;	// push return address
+				stack[++sp] = ip;	// push return address after the CALL in MNEMONICS
 				fp = sp;			// fp points at RET address on stack
 				ip = addr;			// jump to function
 				// code preamble of func must push space for locals
@@ -120,7 +121,9 @@ VM::VM(int *_code,int length,int main, int datasize){
 			default:
 				printf("invalid opcode %d\n",opcode);
 			}
+		    if(trace){
 				VM::dumpStack();
+			}
 				opcode = code[ip];
 		}
 		 if(trace){
@@ -135,15 +138,15 @@ VM::VM(int *_code,int length,int main, int datasize){
 
  void VM::dumpStack(){
 	 int i = 0;
-	 printf("  stack=[");
+	 printf("      stack=[");
 	   for(i;i<=sp;i++){
 		   //if(stack[i]<0) break;
 		   //if (stack[i]>=0)
 		   if(i>0){
-			   printf(",%d",stack[i]); 
+			   printf(",%d=%d",i,stack[i]); 
 		   }else{
 
-			   printf("%d",stack[i]);
+			   printf("%d=%d",i,stack[i]);
 		   }
 	   }
 		   printf("]\n");
