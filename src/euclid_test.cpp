@@ -61,8 +61,8 @@ int euclid[] = {
 			
 //.DEF MAIN: ARGS=0, LOCALS=0
 // PRINT GCD(nn)
-			Bytecode::ICONST, 461952,		// 48    <-- MAIN METHOD! 2nd Arg
-            Bytecode::ICONST, 116298,		// 50	 1st Arg
+			Bytecode::ICONST, 461952,		// 48    <-- MAIN METHOD! 1st Arg
+            Bytecode::ICONST, 116298,		// 50	 2nd Arg
          	Bytecode::CALL, 0, 2,			// 52  ;Push 2 Args
 			Bytecode::PRINT,				// 55  This should print 18
 			Bytecode::HALT					// 56
