@@ -4,10 +4,10 @@
 #include "simple-vm.h"
 const char *Bytecode::opname[] = {NULL,"iadd","isub","imul","ilt","ieq","br","brt",
 						  "brf","iconst","load","gload","store","gstore",
-						  "print","pop","halt","call","ret"};
-		int Bytecode::operands[] ={0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,2,0};
+						  "print","pop","halt","call","ret","init"};
+		int Bytecode::operands[] ={0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,2,0,0};
 
-VM::VM(int *_code,int length,int main, int datasize){
+VM::VM(int *_code,int length,int main, int datasize,const char* ofilename){
 	code = _code;
 	arr_size = length;
 	nglobals = datasize;
@@ -16,20 +16,27 @@ VM::VM(int *_code,int length,int main, int datasize){
 	stack = new int[DEFAULT_STACK_SIZE];
     sp = -1;								// stack point starts at -1
 	fp = -1;							    // frame pointer starts at -1
-	trace = false;
-	
+	trace = FALSE;
+	outfilename = ofilename;
+	fout = NULL;
 
 };
 
 
  void VM::cpu(){
 	 int addr,offset,nargs,rvalue,a,b;
+	 if(outfilename!=NULL){
+	  fout = fopen(outfilename,"a+");
+	  if(fout == NULL){
+		  fprintf(stderr,"Failed to open '%s' file\n", outfilename);
+		  }
+	 }
 	  int opcode = code[ip];
 		while(opcode!= Bytecode::HALT && ip<arr_size){
 		  //fetch
 		  const char *instr = VM::opname[opcode];
 		 //char *instr = bytecode->instructions[opcode].name;
-		 if(trace){
+		 if(trace==1){
 			 VM::disassemble(ip,opcode);
 		  }
 		 ip++; //inc instruction pointer
@@ -78,9 +85,6 @@ VM::VM(int *_code,int length,int main, int datasize){
 				offset = code[ip++];
 				stack[++sp] = stack[fp+offset];
 				break;
-			case Bytecode::PRINT:
-				printf("%4u",stack[sp--]);
-				break;
 			case Bytecode::GLOAD:
 				addr = code[ip++];
 				stack[++sp] = globals[addr];
@@ -92,6 +96,10 @@ VM::VM(int *_code,int length,int main, int datasize){
 			case Bytecode::GSTORE:
 				addr = code[ip++];
 				globals[addr] = stack[sp--];
+				break;
+			case Bytecode::PRINT:
+				if(fout){fprintf(fout,"%4u",stack[sp--]);}
+				else{printf("%4u",stack[sp--]);}
 				break;
 			case Bytecode::POP:
 				--sp;
@@ -118,19 +126,26 @@ VM::VM(int *_code,int length,int main, int datasize){
 				sp -= nargs;			// pop args
 				stack[++sp] = rvalue;	// leave result on stack
 				break;
+			case Bytecode::INIT:		// Not used at this time; only used in parsing file
+				break;						// Will be used once registers are implemented
 			default:
-				printf("invalid opcode %d\n",opcode);
+				if(fout!=NULL){
+				 fprintf(fout,"invalid opcode %d\n",opcode);
+				}else{
+				 printf("invalid opcode %d\n",opcode);
+				}
 			}
-		    if(trace){
+		    if(trace==1){
 				VM::dumpStack();
 			}
 				opcode = code[ip];
 		}
-		 if(trace){
+		 if(trace==1){
 			 VM::disassemble(ip,code[ip]);
 			 VM::dumpStack();
 			 VM::dumpDataMemory();
 		 }
+		 //if(fout!=NULL){fclose(fout);}
 	};
  void VM::exec(){
 	 VM::cpu();
@@ -138,35 +153,66 @@ VM::VM(int *_code,int length,int main, int datasize){
 
  void VM::dumpStack(){
 	 int i = 0;
-	 printf("      stack=[");
+	 if(fout!=NULL){
+	    fprintf(fout,"      stack=[");
+	 }else{
+		printf("      stack=[");
+	 }
 	   for(i;i<=sp;i++){
 		   //if(stack[i]<0) break;
 		   //if (stack[i]>=0)
 		   if(i>0){
-			   printf(",%d=%d",i,stack[i]); 
+			   if(fout!=NULL){
+				fprintf(fout,",%d=%d",i,stack[i]);
+			   }else{
+				 printf(",%d=%d",i,stack[i]);
+			   }
 		   }else{
-
-			   printf("%d=%d",i,stack[i]);
+			   if(fout!=NULL){
+			   fprintf(fout,"%d=%d",i,stack[i]);
+			   }else{
+				    printf("%d=%d",i,stack[i]);
+			   }
 		   }
 	   }
+	   if(fout!=NULL){
+		   fprintf(fout,"]\n");
+	   }else{
 		   printf("]\n");
+	   }
 	   
  };
 
   void VM::disassemble(int ip,int opcode){
 	   const char *instr = VM::opname[opcode];
 	   int nops = VM::operands[opcode];
-	   printf("%04d: %6s",ip,instr);
+	   if(fout!=NULL){
+		fprintf(fout,"%04d: %6s",ip,instr);
+	   }else{
+		printf("%04d: %6s",ip,instr);
+	   }
 
 	   if(nops==1){
+		   if(fout!=NULL){
+			fprintf(fout,"%4d",code[ip+1]);
+		   }else{
 		   printf("%4d",code[ip+1]);
+		   }
 	   }
 	   else if(nops==2){
-		   printf(" %d %d",code[ip+1],code[ip+2]);
+		   if(fout!=NULL){
+			   fprintf(fout," %d %d",code[ip+1],code[ip+2]);
+		   }else{
+				printf(" %d %d",code[ip+1],code[ip+2]);
+		   }
 	   }
 	   else{
 		   if (opcode!=14){
-			  printf("    ");
+			   if(fout!=NULL){
+				 fprintf(fout,"    ");
+			   }else{
+				 printf("    ");
+			   }
 		   }
 	   }
 	   //need to print what is on the stack
@@ -176,26 +222,131 @@ VM::VM(int *_code,int length,int main, int datasize){
 
   void VM::dumpDataMemory(){
 	  
-	  printf("\tData memory\n\t---------\n");
+	  if(fout!=NULL){
+		  fprintf(fout,"\n\tData memory\n\t---------\n");
+	  }else{
+		printf("\n\tData memory\n\t---------\n");
+	  }
 
 	  for(int i=0;i<nglobals;i++){
 		  if(globals[i]>=0){
-		  printf("\t%04d: %d\n",i,globals[i]);
+			if(fout!=NULL){
+				fprintf(fout,"\t%04d: %d\n",i,globals[i]);
+			}else{
+				printf("\t%04d: %d\n",i,globals[i]);
+			}
 		  }
 	  }
+	  if(fout!=NULL){
+		fprintf(fout,"\n");
+	  }else{
 	  printf("\n");
+	  }
   }
 
   void VM::dumpCodeMemory(){
-	 
-	  printf("\tCode memory:\n\t---------\n");
+
+	  if(fout!=NULL){
+		  fprintf(fout,"\n\tCode memory:\n\t---------\n");
+	  }else{
+		  printf("\n\tCode memory:\n\t---------\n");
+	  }
 
 	  for(int i=0;i<arr_size;i++){
 		  if(code[i]>=0){
-		  printf("\t%04d: %d\n",i,code[i]);
+			   if(fout!=NULL){
+				   fprintf(fout,"\t%04d: %d\n",i,code[i]);
+			   }else{
+					printf("\t%04d: %d\n",i,code[i]);
+			   }
 		  }
 	  }
-	   printf("\n");
+	   if(fout!=NULL){
+		   fprintf(fout,"\n");
+	   }else{
+		printf("\n");
+	   }
+  }
+
+  Parser::Parser(const char* ifilename){
+	 infilename = ifilename; 
+
+  }
+
+  int* Parser::parse(){
+	   char buf[MAX_CHARS_PER_LINE];
+	   char* tk;
+	   static int n = 0; // a for-loop index
+	   // array to store memory addresses of the tokens in buf
+        // initialize to 0
+	   fin.open(infilename); // open a file
+  if (!fin.good()){ 
+	  token[0]=-1;
+	  printf("\nError opening file. Make sure file exists in Directory.\n");
+    return token; // exit if file not found
+  }
+ 
+  
+  // read each line of the file
+  while (!fin.eof())
+  {
+    // read an entire line into memory
+   
+    fin.getline(buf, MAX_CHARS_PER_LINE);
+    
+    // parse the line into comma-delimited tokens
+    
+    // parse the line
+	if(strcspn(buf,"/")<2){					//ignore "//" comments
+	}else{
+	 tk = strtok(buf, DELIMITER);			// first token
+	 char* lower = lowercase(tk);
+	  if (strcmp(lower,"init")==0){
+		  setiaddr(n);
+	  }else{
+			int idx  = find(tk);
+			if(idx!=-1){token[n++] = idx;}
+			while(tk!=NULL)							// zero if line is blank
+
+			{
+				tk = strtok(NULL,DELIMITER);
+				if(tk==NULL || strcspn(tk,"/")<strlen(tk)) break; // Do not want to parse "//" comments
+				token[n++] = atoi(tk); // subsequent tokens
+		
+			  }
+	  }
+    }
+  }
+	setszToken(n);
+	return token;
   }
 
 
+  int Parser::find(char* opstr){
+	  int indx = -1;
+	 
+	  char* lower = lowercase(opstr);
+	  for(int i = 1;i<OPERANDS_ARRAY_SIZE;i++){
+		  int eq = strcmp(lower,opname[i]);
+		 if(eq==0){
+			 indx=i;break;
+		 }
+	  }
+
+	  return indx;
+  }
+
+  char* Parser::lowercase(char* opstring){
+	  unsigned s = strlen(opstring);
+	  int j = 0;
+	  char  lcase[10];
+	  for(unsigned i = 0;i<s;i++){
+		  if(opstring[i]=='/') break;
+		  if(opstring[i]>='A' && opstring[i]<='Z'){
+		  lcase[j]=tolower(opstring[i]);
+		  j++;
+		  }
+		  lcase[j]='\0';
+	  }
+	  return lcase;
+  }
