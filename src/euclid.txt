@@ -1,0 +1,41 @@
+			LOAD, -3,			// 0
+//  LOAD larger number         
+           LOAD, -4,			// 2
+		   GSTORE,0,			// 4
+			GSTORE,1,			// 6
+//  LOAD 0 top of stack
+			ICONST,0,			// 8
+			GLOAD, 0,         // 10
+//While 0<N 
+   			ILT,				// 12
+			BRF, 32,			// 13
+// IF N<I
+			GLOAD, 0,			// 15
+			GLOAD, 1,			// 17
+			ILT,				// 19
+			BRF,35,			// 20 N<I so assign T=N;N=I;I=T;
+
+			GLOAD, 0,			// 22
+			GLOAD, 1,			// 24
+			GSTORE,0,			// 26
+			GSTORE,1,			// 28
+			BR,8,				// 30
+
+			GLOAD,1,		    // 32
+			RET,				// 34
+
+			GLOAD, 0,			// 35
+			GLOAD, 1,			// 37			
+			ISUB,				// 39
+			GSTORE,0,			// 40
+			BR,8,				// 42
+			GLOAD,1,			// 44
+			GSTORE,1,			// 46
+			
+//.DEF MAIN: ARGS=0, LOCALS=0
+// PRINT GCD(nn)
+			ICONST, 461952,		// 48    <-- MAIN METHOD! 1st Arg
+            ICONST, 116298,		// 50	 2nd Arg
+         	CALL, 0, 2,			// 52  ;Push 2 Args
+			PRINT,				// 55  This should print 18
+			HALT					// 56

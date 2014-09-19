@@ -1,0 +1,6 @@
+    INIT,
+    ICONST,1,
+	ICONST,2,
+	IADD,
+	PRINT,
+	HALT
